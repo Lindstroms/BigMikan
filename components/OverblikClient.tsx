@@ -221,6 +221,27 @@ export default function OverblikClient() {
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr>
+                <td className="sticky left-0 z-10 border-t-2 border-sea-border bg-sea-bg p-2 font-medium whitespace-nowrap">
+                  I alt
+                </td>
+                {activities.map((a) => {
+                  const { confirmed, maybe } = countSignups(crew, signups, a.id);
+                  return (
+                    <td
+                      key={a.id}
+                      className="border-t-2 border-l border-sea-border bg-sea-bg p-2 text-center"
+                    >
+                      <span className="font-semibold">{confirmed}</span>
+                      {maybe > 0 && (
+                        <span className="ml-1 text-xs text-sea-muted">+{maybe} måske</span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
@@ -261,7 +282,9 @@ function Legend() {
       ))}
       {entries.length > 0 && (
         <span className="basis-full text-xs">
-          Klik på en celle (når låst op) for at ændre status.
+          Klik på en celle (når låst op) for at ændre status. &quot;I
+          alt&quot;-rækken tæller Tilmeldt + Bekræftet; et evt. &quot;+N
+          måske&quot; viser hvor mange der har svaret måske.
         </span>
       )}
     </div>
@@ -281,6 +304,21 @@ function labelFor(s: SignupStatus) {
     case "frameldt":
       return "Deltager ikke";
   }
+}
+
+function countSignups(
+  crew: CrewMember[],
+  signups: Record<string, Signup>,
+  activityId: string,
+) {
+  let confirmed = 0;
+  let maybe = 0;
+  for (const member of crew) {
+    const status = signups[`${member.id}:${activityId}`]?.status;
+    if (status === "tilmeldt" || status === "bekraeftet") confirmed++;
+    else if (status === "maaske") maybe++;
+  }
+  return { confirmed, maybe };
 }
 
 function csvEscape(value: string) {
