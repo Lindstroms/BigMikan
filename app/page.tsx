@@ -33,7 +33,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-2xl space-y-4">
       <h1 className="text-xl font-semibold">Hvem er du?</h1>
       <p className="text-sm text-sea-muted">
         Vælg dit navn for at se sæsonens sejladser og melde dig til eller fra.

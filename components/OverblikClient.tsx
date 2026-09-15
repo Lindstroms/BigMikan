@@ -366,6 +366,11 @@ function AdminPanel({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
+  const [editActivityName, setEditActivityName] = useState("");
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editEndDate, setEditEndDate] = useState("");
+
   async function addMember(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase || !name.trim()) return;
@@ -423,6 +428,22 @@ function AdminPanel({
     }
   }
 
+  async function removeMember(member: CrewMember) {
+    if (!supabase) return;
+    if (
+      !window.confirm(
+        `Slet ${member.name} og alle deres tilmeldinger permanent?`,
+      )
+    )
+      return;
+    const { error } = await supabase
+      .from("crew_members")
+      .delete()
+      .eq("id", member.id);
+    if (error) setError(error.message);
+    else onChanged();
+  }
+
   async function addActivity(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase || !activityName.trim() || !startDate) return;
@@ -449,6 +470,37 @@ function AdminPanel({
     const { error } = await supabase.from("activities").delete().eq("id", id);
     if (error) setError(error.message);
     else onChanged();
+  }
+
+  function startEditActivity(activity: Activity) {
+    setEditingActivityId(activity.id);
+    setEditActivityName(activity.name);
+    setEditStartDate(activity.start_date);
+    setEditEndDate(activity.end_date ?? "");
+  }
+
+  function cancelEditActivity() {
+    setEditingActivityId(null);
+  }
+
+  async function saveEditActivity(e: React.FormEvent, id: string) {
+    e.preventDefault();
+    if (!supabase || !editActivityName.trim() || !editStartDate) return;
+    const season = new Date(editStartDate).getFullYear();
+    const { error } = await supabase
+      .from("activities")
+      .update({
+        name: editActivityName.trim(),
+        start_date: editStartDate,
+        end_date: editEndDate || null,
+        season,
+      })
+      .eq("id", id);
+    if (error) setError(error.message);
+    else {
+      setEditingActivityId(null);
+      onChanged();
+    }
   }
 
   return (
@@ -521,6 +573,13 @@ function AdminPanel({
                   >
                     {member.active ? "Deaktivér" : "Genaktivér"}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => removeMember(member)}
+                    className="text-xs text-rose-600 underline"
+                  >
+                    Slet
+                  </button>
                 </div>
               </li>
             ),
@@ -557,20 +616,70 @@ function AdminPanel({
       <div>
         <h3 className="text-sm font-medium">Sejladser</h3>
         <ul className="mt-2 divide-y divide-sea-border text-sm">
-          {activities.map((a) => (
-            <li key={a.id} className="flex items-center justify-between py-1.5">
-              <span>
-                {a.name} <span className="text-sea-muted">({a.start_date})</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => removeActivity(a.id)}
-                className="text-xs text-rose-600 underline"
-              >
-                Slet
-              </button>
-            </li>
-          ))}
+          {activities.map((a) =>
+            editingActivityId === a.id ? (
+              <li key={a.id} className="py-2">
+                <form
+                  onSubmit={(e) => saveEditActivity(e, a.id)}
+                  className="flex flex-wrap gap-2"
+                >
+                  <input
+                    placeholder="Navn på sejlads"
+                    value={editActivityName}
+                    onChange={(e) => setEditActivityName(e.target.value)}
+                    className="min-w-[10rem] flex-1 rounded-md border border-sea-border px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    type="date"
+                    value={editStartDate}
+                    onChange={(e) => setEditStartDate(e.target.value)}
+                    className="rounded-md border border-sea-border px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    type="date"
+                    value={editEndDate}
+                    onChange={(e) => setEditEndDate(e.target.value)}
+                    className="rounded-md border border-sea-border px-2 py-1.5 text-sm"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-md bg-sea-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-sea-primaryDark"
+                  >
+                    Gem
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelEditActivity}
+                    className="rounded-md border border-sea-border px-3 py-1.5 text-sm font-medium hover:border-sea-primary"
+                  >
+                    Annullér
+                  </button>
+                </form>
+              </li>
+            ) : (
+              <li key={a.id} className="flex items-center justify-between py-1.5">
+                <span>
+                  {a.name} <span className="text-sea-muted">({a.start_date})</span>
+                </span>
+                <div className="flex shrink-0 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => startEditActivity(a)}
+                    className="text-xs text-sea-primary underline"
+                  >
+                    Rediger
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeActivity(a.id)}
+                    className="text-xs text-rose-600 underline"
+                  >
+                    Slet
+                  </button>
+                </div>
+              </li>
+            ),
+          )}
         </ul>
         <form onSubmit={addActivity} className="mt-3 flex flex-wrap gap-2">
           <input

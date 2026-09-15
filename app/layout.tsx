@@ -13,7 +13,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="da">
       <body className="min-h-screen font-sans">
         <header className="border-b border-sea-border bg-sea-surface">
-          <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
             <Link href="/" className="text-lg font-semibold text-sea-primary">
               ⛵ Big Mikan
             </Link>
@@ -27,7 +27,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </nav>
           </div>
         </header>
-        <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>
+        <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
       </body>
     </html>
   );
