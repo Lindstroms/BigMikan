@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import type { Activity, CrewMember, Signup, SignupStatus } from "@/lib/types";
 import { STATUS_SHORT, STATUS_STYLE, nextStatus } from "@/lib/status";
+import { formatDateRange } from "@/lib/date";
 import SetupNotice from "@/components/SetupNotice";
 
 const UNLOCK_KEY = "bigmikan_unlocked";
@@ -28,12 +29,17 @@ export default function OverblikClient() {
   const load = useCallback(async () => {
     if (!supabase) return;
     const [crewRes, activityRes, signupRes] = await Promise.all([
-      supabase.from("crew_members").select("*").order("sort_order", { ascending: true }),
+      supabase.from("crew_members").select("*"),
       supabase.from("activities").select("*").order("start_date", { ascending: true }),
       supabase.from("signups").select("*"),
     ]);
     if (crewRes.error) setError(crewRes.error.message);
-    else setCrew((crewRes.data ?? []) as CrewMember[]);
+    else {
+      const sorted = [...((crewRes.data ?? []) as CrewMember[])].sort((a, b) =>
+        a.name.localeCompare(b.name, "da"),
+      );
+      setCrew(sorted);
+    }
 
     if (activityRes.error) setError(activityRes.error.message);
     else setActivities((activityRes.data ?? []) as Activity[]);
@@ -192,6 +198,9 @@ export default function OverblikClient() {
                     className="min-w-[6.5rem] border-b border-l border-sea-border p-2 text-left align-bottom font-medium"
                   >
                     <span className="block whitespace-nowrap">{a.name}</span>
+                    <span className="block whitespace-nowrap text-xs font-normal text-sea-muted">
+                      {formatDateRange(a.start_date, a.end_date)}
+                    </span>
                   </th>
                 ))}
               </tr>

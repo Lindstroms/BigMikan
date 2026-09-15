@@ -6,6 +6,7 @@ import Link from "next/link";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import type { Activity, CrewMember, Signup, SignupStatus } from "@/lib/types";
 import { STATUS_LABEL, STATUS_STYLE } from "@/lib/status";
+import { formatDateRange } from "@/lib/date";
 import SetupNotice from "@/components/SetupNotice";
 
 const CREW_CHOICES: { status: SignupStatus; label: string }[] = [
@@ -164,19 +165,4 @@ export default function MigClient() {
       </p>
     </div>
   );
-}
-
-function formatDateRange(start: string, end: string | null) {
-  const startDate = new Date(start);
-  const startText = startDate.toLocaleDateString("da-DK", {
-    day: "numeric",
-    month: "short",
-  });
-  if (!end || end === start) return startText;
-  const endDate = new Date(end);
-  const endText = endDate.toLocaleDateString("da-DK", {
-    day: "numeric",
-    month: "short",
-  });
-  return `${startText} - ${endText}`;
 }
