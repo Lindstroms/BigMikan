@@ -72,13 +72,43 @@ export default function HomePage() {
         ))}
       </ul>
 
-      <p className="pt-4 text-sm text-sea-muted">
-        Er du Lars?{" "}
-        <Link href="/overblik" className="text-sea-primary underline">
-          Se det samlede overblik
-        </Link>
-        .
-      </p>
+      <Link
+        href="/overblik"
+        className="mt-2 flex items-center gap-3.5 rounded-2xl bg-sea-primary px-4 py-4 text-left text-white shadow-[0_8px_20px_-10px_rgba(11,79,108,0.55)] hover:bg-sea-primaryDark"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-white/15">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-5 w-5"
+            aria-hidden="true"
+          >
+            <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+            <line x1="3.5" y1="9.5" x2="20.5" y2="9.5" />
+            <line x1="8.5" y1="9.5" x2="8.5" y2="19.5" />
+          </svg>
+        </span>
+        <span className="flex flex-col gap-0.5">
+          <span className="text-base font-bold tracking-tight">Overblik</span>
+          <span className="text-xs text-white/80">Se det samlede overblik</span>
+        </span>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="ml-auto h-4 w-4 shrink-0 text-white/70"
+          aria-hidden="true"
+        >
+          <path d="M9 6l6 6-6 6" />
+        </svg>
+      </Link>
     </div>
   );
 }
