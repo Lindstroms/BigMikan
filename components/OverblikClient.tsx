@@ -180,6 +180,12 @@ export default function OverblikClient() {
                 <th className="sticky left-0 z-10 border-b border-sea-border bg-sea-surface p-2 text-left font-medium">
                   Navn
                 </th>
+                <th className="min-w-[7rem] border-b border-l border-sea-border p-2 text-left font-medium">
+                  Telefon
+                </th>
+                <th className="min-w-[9rem] border-b border-l border-sea-border p-2 text-left font-medium">
+                  Mail
+                </th>
                 {activities.map((a) => (
                   <th
                     key={a.id}
@@ -195,6 +201,12 @@ export default function OverblikClient() {
                 <tr key={member.id} className={member.active ? "" : "opacity-50"}>
                   <td className="sticky left-0 z-10 border-b border-sea-border bg-sea-surface p-2 font-medium whitespace-nowrap">
                     {member.name}
+                  </td>
+                  <td className="border-b border-l border-sea-border p-2 whitespace-nowrap text-sea-muted">
+                    {member.phone || "–"}
+                  </td>
+                  <td className="border-b border-l border-sea-border p-2 whitespace-nowrap text-sea-muted">
+                    {member.email || "–"}
                   </td>
                   {activities.map((a) => {
                     const status =
@@ -226,6 +238,8 @@ export default function OverblikClient() {
                 <td className="sticky left-0 z-10 border-t-2 border-sea-border bg-sea-bg p-2 font-medium whitespace-nowrap">
                   I alt
                 </td>
+                <td className="border-t-2 border-l border-sea-border bg-sea-bg p-2" />
+                <td className="border-t-2 border-l border-sea-border bg-sea-bg p-2" />
                 {activities.map((a) => {
                   const { confirmed, maybe } = countSignups(crew, signups, a.id);
                   return (
@@ -343,6 +357,11 @@ function AdminPanel({
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+
   const [activityName, setActivityName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -373,6 +392,35 @@ function AdminPanel({
       .eq("id", member.id);
     if (error) setError(error.message);
     else onChanged();
+  }
+
+  function startEdit(member: CrewMember) {
+    setEditingId(member.id);
+    setEditName(member.name);
+    setEditPhone(member.phone ?? "");
+    setEditEmail(member.email ?? "");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  async function saveEdit(e: React.FormEvent, id: string) {
+    e.preventDefault();
+    if (!supabase || !editName.trim()) return;
+    const { error } = await supabase
+      .from("crew_members")
+      .update({
+        name: editName.trim(),
+        phone: editPhone.trim() || null,
+        email: editEmail.trim() || null,
+      })
+      .eq("id", id);
+    if (error) setError(error.message);
+    else {
+      setEditingId(null);
+      onChanged();
+    }
   }
 
   async function addActivity(e: React.FormEvent) {
@@ -410,20 +458,73 @@ function AdminPanel({
       <div>
         <h3 className="text-sm font-medium">Besætning</h3>
         <ul className="mt-2 divide-y divide-sea-border text-sm">
-          {crew.map((member) => (
-            <li key={member.id} className="flex items-center justify-between py-1.5">
-              <span className={member.active ? "" : "text-sea-muted line-through"}>
-                {member.name}
-              </span>
-              <button
-                type="button"
-                onClick={() => toggleActive(member)}
-                className="text-xs text-sea-primary underline"
-              >
-                {member.active ? "Deaktivér" : "Genaktivér"}
-              </button>
-            </li>
-          ))}
+          {crew.map((member) =>
+            editingId === member.id ? (
+              <li key={member.id} className="py-2">
+                <form
+                  onSubmit={(e) => saveEdit(e, member.id)}
+                  className="flex flex-wrap gap-2"
+                >
+                  <input
+                    placeholder="Navn"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="min-w-[8rem] flex-1 rounded-md border border-sea-border px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    placeholder="Telefon (valgfri)"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    className="min-w-[8rem] flex-1 rounded-md border border-sea-border px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    placeholder="Mail (valgfri)"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    className="min-w-[8rem] flex-1 rounded-md border border-sea-border px-2 py-1.5 text-sm"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-md bg-sea-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-sea-primaryDark"
+                  >
+                    Gem
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelEdit}
+                    className="rounded-md border border-sea-border px-3 py-1.5 text-sm font-medium hover:border-sea-primary"
+                  >
+                    Annullér
+                  </button>
+                </form>
+              </li>
+            ) : (
+              <li key={member.id} className="flex items-center justify-between gap-2 py-1.5">
+                <div className={member.active ? "" : "text-sea-muted line-through"}>
+                  <span className="font-medium">{member.name}</span>
+                  <span className="ml-2 text-xs text-sea-muted">
+                    {member.phone || "–"} · {member.email || "–"}
+                  </span>
+                </div>
+                <div className="flex shrink-0 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(member)}
+                    className="text-xs text-sea-primary underline"
+                  >
+                    Rediger
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleActive(member)}
+                    className="text-xs text-sea-primary underline"
+                  >
+                    {member.active ? "Deaktivér" : "Genaktivér"}
+                  </button>
+                </div>
+              </li>
+            ),
+          )}
         </ul>
         <form onSubmit={addMember} className="mt-3 flex flex-wrap gap-2">
           <input
