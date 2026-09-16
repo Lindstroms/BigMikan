@@ -12,6 +12,7 @@ import { downloadTextFile } from "@/lib/download";
 import SetupNotice from "@/components/SetupNotice";
 
 const ATTENDING_STATUSES: SignupStatus[] = ["tilmeldt", "bekraeftet"];
+const HIDE_TIP_KEY = "bigmikan_hide_bookmark_tip";
 
 const CREW_CHOICES: { status: SignupStatus; label: string }[] = [
   { status: "tilmeldt", label: "Deltager" },
@@ -27,15 +28,20 @@ export default function MigClient() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [signups, setSignups] = useState<Record<string, Signup>>({});
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [othersAttending, setOthersAttending] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [showTip, setShowTip] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const load = useCallback(async () => {
     if (!supabase || !id) return;
     const [memberRes, activityRes, signupRes] = await Promise.all([
       supabase.from("crew_members").select("*").eq("id", id).maybeSingle(),
       supabase.from("activities").select("*").order("start_date", { ascending: true }),
-      supabase.from("signups").select("*").eq("crew_member_id", id),
+      // All crew's signups, not just this person's - needed for the
+      // "X andre er tilmeldt" count.
+      supabase.from("signups").select("*"),
     ]);
 
     if (memberRes.error) setError(memberRes.error.message);
@@ -48,18 +54,53 @@ export default function MigClient() {
     else {
       const map: Record<string, Signup> = {};
       const notes: Record<string, string> = {};
+      const others: Record<string, number> = {};
       for (const s of (signupRes.data ?? []) as Signup[]) {
-        map[s.activity_id] = s;
-        notes[s.activity_id] = s.note ?? "";
+        if (s.crew_member_id === id) {
+          map[s.activity_id] = s;
+          notes[s.activity_id] = s.note ?? "";
+        } else if (ATTENDING_STATUSES.includes(s.status)) {
+          others[s.activity_id] = (others[s.activity_id] ?? 0) + 1;
+        }
       }
       setSignups(map);
       setNoteDrafts(notes);
+      setOthersAttending(others);
     }
   }, [id]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(HIDE_TIP_KEY) !== "true") {
+        setShowTip(true);
+      }
+    } catch {
+      setShowTip(true);
+    }
+  }, []);
+
+  function dismissTip() {
+    setShowTip(false);
+    try {
+      window.localStorage.setItem(HIDE_TIP_KEY, "true");
+    } catch {
+      // localStorage utilgængelig (fx privat browsing) - tippet vises igen.
+    }
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      setError("Kunne ikke kopiere linket.");
+    }
+  }
 
   async function setStatus(activityId: string, status: SignupStatus) {
     if (!supabase || !id) return;
@@ -162,6 +203,32 @@ export default function MigClient() {
         )}
       </div>
 
+      {showTip && (
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-sea-border bg-sea-surface/80 p-3 text-xs text-sea-muted">
+          <p>
+            Tip: Gem dette link som bogmærke eller på din hjemmeskærm, så du
+            slipper for at vælge dit navn hver gang.
+          </p>
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={copyLink}
+              className="whitespace-nowrap rounded-md border border-sea-border bg-white px-2 py-1 font-medium hover:border-sea-primary"
+            >
+              {linkCopied ? "Kopieret!" : "Kopiér link"}
+            </button>
+            <button
+              type="button"
+              onClick={dismissTip}
+              aria-label="Luk tip"
+              className="whitespace-nowrap rounded-md border border-sea-border bg-white px-2 py-1 font-medium hover:border-sea-primary"
+            >
+              Luk
+            </button>
+          </div>
+        </div>
+      )}
+
       {activities.length === 0 && (
         <p className="text-sm text-sea-muted">
           Der er endnu ikke oprettet nogen sejladser for sæsonen.
@@ -182,6 +249,13 @@ export default function MigClient() {
                   <p className="text-xs text-sea-muted">
                     {formatDateRange(activity.start_date, activity.end_date)}
                   </p>
+                  {(othersAttending[activity.id] ?? 0) > 0 && (
+                    <p className="text-xs text-sea-accent">
+                      {othersAttending[activity.id] === 1
+                        ? "1 anden er tilmeldt"
+                        : `${othersAttending[activity.id]} andre er tilmeldt`}
+                    </p>
+                  )}
                 </div>
                 <span
                   className={`shrink-0 rounded-full border px-2 py-1 text-xs font-medium ${STATUS_STYLE[current]}`}
