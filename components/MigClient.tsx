@@ -6,7 +6,7 @@ import Link from "next/link";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import type { Activity, CrewMember, Signup, SignupStatus } from "@/lib/types";
 import { STATUS_LABEL, STATUS_STYLE } from "@/lib/status";
-import { formatDateRange } from "@/lib/date";
+import { formatDateRange, isWithinChangeLockWindow } from "@/lib/date";
 import { buildIcsCalendar } from "@/lib/ics";
 import { downloadTextFile } from "@/lib/download";
 import SetupNotice from "@/components/SetupNotice";
@@ -131,6 +131,22 @@ export default function MigClient() {
 
   async function setStatus(activityId: string, status: SignupStatus) {
     if (!supabase || !id) return;
+    const activity = activities.find((a) => a.id === activityId);
+    const current = signups[activityId]?.status ?? "mangler_svar";
+    if (
+      activity &&
+      ATTENDING_STATUSES.includes(current) &&
+      !ATTENDING_STATUSES.includes(status) &&
+      isWithinChangeLockWindow(activity.start_date)
+    ) {
+      window.alert(
+        `Der er under 7 dage til ${activity.name} (${formatDateRange(
+          activity.start_date,
+          activity.end_date,
+        )}). Du kan ikke længere selv ændre din tilmelding her - giv Lars besked direkte, hvis du er forhindret.`,
+      );
+      return;
+    }
     setSavingId(activityId);
     const { data, error } = await supabase
       .from("signups")
@@ -322,6 +338,9 @@ export default function MigClient() {
       <ul className="space-y-3">
         {activities.map((activity) => {
           const current = signups[activity.id]?.status ?? "mangler_svar";
+          const locked =
+            ATTENDING_STATUSES.includes(current) &&
+            isWithinChangeLockWindow(activity.start_date);
           return (
             <li
               key={activity.id}
@@ -347,6 +366,12 @@ export default function MigClient() {
                   {STATUS_LABEL[current]}
                 </span>
               </div>
+              {locked && (
+                <p className="mt-2 text-xs text-amber-700">
+                  Mindre end 7 dage til afgang - kontakt Lars for at ændre
+                  din tilmelding.
+                </p>
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {CREW_CHOICES.map((choice) => (
                   <button
