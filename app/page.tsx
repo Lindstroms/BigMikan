@@ -3,13 +3,16 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
-import type { CrewMember } from "@/lib/types";
+import type { Activity, CrewMember } from "@/lib/types";
+import { formatDateRange } from "@/lib/date";
 import SetupNotice from "@/components/SetupNotice";
 
 export default function HomePage() {
   const [crew, setCrew] = useState<CrewMember[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [nextActivity, setNextActivity] = useState<Activity | null>(null);
+  const [nextActivityCount, setNextActivityCount] = useState(0);
 
   useEffect(() => {
     if (!supabase) return;
@@ -21,6 +24,28 @@ export default function HomePage() {
       .then(({ data, error }) => {
         if (error) setError(error.message);
         else setCrew(data as CrewMember[]);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!supabase) return;
+    const today = new Date().toISOString().slice(0, 10);
+    supabase
+      .from("activities")
+      .select("*")
+      .gte("start_date", today)
+      .order("start_date", { ascending: true })
+      .limit(1)
+      .then(async ({ data }) => {
+        const activity = data?.[0] as Activity | undefined;
+        if (!activity || !supabase) return;
+        setNextActivity(activity);
+        const { data: signupData } = await supabase
+          .from("signups")
+          .select("status")
+          .eq("activity_id", activity.id)
+          .in("status", ["tilmeldt", "bekraeftet"]);
+        setNextActivityCount(signupData?.length ?? 0);
       });
   }, []);
 
@@ -39,6 +64,48 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-sea-bg/80" />
 
         <div className="relative space-y-3 p-5 sm:p-6">
+          {nextActivity && (
+            <div className="flex items-center gap-3 rounded-xl border border-sea-border bg-sea-surface p-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-sea-accent/10">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5 text-sea-accent"
+                  aria-hidden="true"
+                >
+                  <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+                  <line x1="3.5" y1="9.5" x2="20.5" y2="9.5" />
+                  <line x1="8" y1="3" x2="8" y2="6" />
+                  <line x1="16" y1="3" x2="16" y2="6" />
+                </svg>
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10.5px] font-bold uppercase tracking-wider text-sea-accent">
+                  Næste aktivitet
+                </p>
+                <p className="flex flex-wrap items-baseline gap-x-1.5">
+                  <span className="font-bold">{nextActivity.name}</span>
+                  <span className="text-xs text-sea-muted">
+                    {formatDateRange(
+                      nextActivity.start_date,
+                      nextActivity.end_date,
+                    )}
+                  </span>
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <div className="text-lg font-extrabold leading-none">
+                  {nextActivityCount}
+                </div>
+                <div className="text-[10.5px] text-sea-muted">tilmeldt</div>
+              </div>
+            </div>
+          )}
+
           <CtaBox
             onClick={() => setExpanded((v) => !v)}
             expanded={expanded}
