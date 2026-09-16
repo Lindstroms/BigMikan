@@ -33,6 +33,10 @@ export default function MigClient() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [showTip, setShowTip] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [phoneDraft, setPhoneDraft] = useState("");
+  const [emailDraft, setEmailDraft] = useState("");
+  const [savingContact, setSavingContact] = useState(false);
+  const [contactSkipped, setContactSkipped] = useState(false);
 
   const load = useCallback(async () => {
     if (!supabase || !id) return;
@@ -45,7 +49,12 @@ export default function MigClient() {
     ]);
 
     if (memberRes.error) setError(memberRes.error.message);
-    else setMember(memberRes.data as CrewMember | null);
+    else {
+      const m = memberRes.data as CrewMember | null;
+      setMember(m);
+      setPhoneDraft(m?.phone ?? "");
+      setEmailDraft(m?.email ?? "");
+    }
 
     if (activityRes.error) setError(activityRes.error.message);
     else setActivities((activityRes.data ?? []) as Activity[]);
@@ -100,6 +109,24 @@ export default function MigClient() {
     } catch {
       setError("Kunne ikke kopiere linket.");
     }
+  }
+
+  async function saveContact(e: React.FormEvent) {
+    e.preventDefault();
+    if (!supabase || !id) return;
+    setSavingContact(true);
+    const { data, error } = await supabase
+      .from("crew_members")
+      .update({
+        phone: phoneDraft.trim() || null,
+        email: emailDraft.trim() || null,
+      })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) setError(error.message);
+    else setMember(data as CrewMember);
+    setSavingContact(false);
   }
 
   async function setStatus(activityId: string, status: SignupStatus) {
@@ -181,6 +208,10 @@ export default function MigClient() {
     return <p className="text-sm text-sea-muted">Henter…</p>;
   }
 
+  const needsPhone = !member.phone;
+  const needsEmail = !member.email;
+  const showContactPrompt = (needsPhone || needsEmail) && !contactSkipped;
+
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="flex items-start justify-between gap-3">
@@ -202,6 +233,59 @@ export default function MigClient() {
           </button>
         )}
       </div>
+
+      {showContactPrompt && (
+        <form
+          onSubmit={saveContact}
+          className="space-y-2 rounded-lg border border-sea-border bg-sea-surface p-3 text-sm"
+        >
+          <p className="text-sea-muted">
+            Vi mangler{" "}
+            {needsPhone && needsEmail
+              ? "dit telefonnummer og din mail"
+              : needsPhone
+                ? "dit telefonnummer"
+                : "din mail"}{" "}
+            — så Lars kan kontakte dig ved behov.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {needsPhone && (
+              <input
+                type="tel"
+                placeholder="Telefon"
+                value={phoneDraft}
+                onChange={(e) => setPhoneDraft(e.target.value)}
+                className="min-w-[8rem] flex-1 rounded-md border border-sea-border px-2.5 py-1.5 text-sm"
+              />
+            )}
+            {needsEmail && (
+              <input
+                type="email"
+                placeholder="Mail"
+                value={emailDraft}
+                onChange={(e) => setEmailDraft(e.target.value)}
+                className="min-w-[8rem] flex-1 rounded-md border border-sea-border px-2.5 py-1.5 text-sm"
+              />
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={savingContact}
+              className="rounded-md bg-sea-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-sea-primaryDark disabled:opacity-50"
+            >
+              Gem
+            </button>
+            <button
+              type="button"
+              onClick={() => setContactSkipped(true)}
+              className="rounded-md border border-sea-border px-3 py-1.5 text-sm font-medium hover:border-sea-primary"
+            >
+              Ikke nu
+            </button>
+          </div>
+        </form>
+      )}
 
       {showTip && (
         <div className="flex items-start justify-between gap-3 rounded-lg border border-sea-border bg-sea-surface/80 p-3 text-xs text-sea-muted">
