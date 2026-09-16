@@ -27,125 +27,126 @@ export default function HomePage() {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
-      <div className="space-y-2">
-        <CtaBox
-          onClick={() => setExpanded((v) => !v)}
-          expanded={expanded}
-          color="primary"
-          title="Tilmeld sejlads"
-          subtitle="Meld dig til eller fra sæsonens sejladser"
-          icon={
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5"
-              aria-hidden="true"
-            >
-              <rect x="4.5" y="3.5" width="15" height="17" rx="2" />
-              <path d="M9 3.5v3h6v-3" />
-              <path d="M8.5 13.5l2.2 2.2L15.5 11" />
-            </svg>
-          }
+    <div className="mx-auto max-w-2xl">
+      <div className="relative overflow-hidden rounded-2xl">
+        <div
+          className="absolute inset-0 bg-cover"
+          style={{
+            backgroundImage: `url(${basePath}/boat.jpg)`,
+            backgroundPosition: "center 62%",
+          }}
         />
-        <CtaBox
-          href="/overblik"
-          color="accent"
-          title="Overblik"
-          subtitle="Samlet overblik over besætning tilmeldt til sejladser"
-          icon={
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5"
-              aria-hidden="true"
-            >
-              <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
-              <line x1="3.5" y1="9.5" x2="20.5" y2="9.5" />
-              <line x1="8.5" y1="9.5" x2="8.5" y2="19.5" />
-            </svg>
-          }
-        />
-      </div>
+        <div className="absolute inset-0 bg-sea-bg/80" />
 
-      <div
-        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        }`}
-      >
-        <div className="overflow-hidden">
-          <div className="relative overflow-hidden rounded-2xl">
-            <div
-              className="absolute inset-0 bg-cover"
-              style={{
-                backgroundImage: `url(${basePath}/boat.jpg)`,
-                backgroundPosition: "center 62%",
-              }}
-            />
-            <div className="absolute inset-0 bg-sea-bg/80" />
+        <div className="relative space-y-3 p-5 sm:p-6">
+          <CtaBox
+            onClick={() => setExpanded((v) => !v)}
+            expanded={expanded}
+            color="primary"
+            title="Tilmeld sejlads"
+            subtitle="Meld dig til eller fra sæsonens sejladser"
+            icon={
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5"
+                aria-hidden="true"
+              >
+                <rect x="4.5" y="3.5" width="15" height="17" rx="2" />
+                <path d="M9 3.5v3h6v-3" />
+                <path d="M8.5 13.5l2.2 2.2L15.5 11" />
+              </svg>
+            }
+          />
 
-            <div className="relative space-y-4 p-5 sm:p-6">
-              <h1 className="text-xl font-semibold">Hvem er du?</h1>
+          <div
+            className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+              expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+            }`}
+          >
+            <div className="overflow-hidden">
+              <div className="space-y-4 rounded-xl bg-sea-surface/70 p-4 pt-3">
+                <h1 className="text-xl font-semibold">Hvem er du?</h1>
 
-              {!isSupabaseConfigured ? (
-                <SetupNotice />
-              ) : (
-                <>
-                  <p className="text-sm text-sea-muted">
-                    Vælg dit navn for at se sæsonens sejladser og melde dig
-                    til eller fra.
-                  </p>
-
-                  {error && (
-                    <p className="rounded-lg border border-rose-300 bg-rose-50 p-3 text-sm text-rose-700">
-                      Kunne ikke hente besætningslisten: {error}
-                    </p>
-                  )}
-
-                  {!error && crew === null && (
+                {!isSupabaseConfigured ? (
+                  <SetupNotice />
+                ) : (
+                  <>
                     <p className="text-sm text-sea-muted">
-                      Henter besætningsliste…
+                      Vælg dit navn for at se sæsonens sejladser og melde dig
+                      til eller fra.
                     </p>
-                  )}
 
-                  {crew !== null && crew.length === 0 && (
-                    <p className="text-sm text-sea-muted">
-                      Der er endnu ikke tilføjet nogen besætningsmedlemmer.
-                      Gå til{" "}
-                      <Link
-                        href="/overblik"
-                        className="text-sea-primary underline"
-                      >
-                        Overblik
-                      </Link>{" "}
-                      for at oprette dem.
-                    </p>
-                  )}
+                    {error && (
+                      <p className="rounded-lg border border-rose-300 bg-rose-50 p-3 text-sm text-rose-700">
+                        Kunne ikke hente besætningslisten: {error}
+                      </p>
+                    )}
 
-                  <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {crew?.map((member) => (
-                      <li key={member.id}>
+                    {!error && crew === null && (
+                      <p className="text-sm text-sea-muted">
+                        Henter besætningsliste…
+                      </p>
+                    )}
+
+                    {crew !== null && crew.length === 0 && (
+                      <p className="text-sm text-sea-muted">
+                        Der er endnu ikke tilføjet nogen besætningsmedlemmer.
+                        Gå til{" "}
                         <Link
-                          href={`/mig?id=${member.id}`}
-                          className="block rounded-lg border border-sea-border bg-sea-surface px-4 py-3 text-center font-medium text-sea-ink shadow-sm hover:border-sea-primary hover:text-sea-primary"
+                          href="/overblik"
+                          className="text-sea-primary underline"
                         >
-                          {member.name}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
+                          Overblik
+                        </Link>{" "}
+                        for at oprette dem.
+                      </p>
+                    )}
+
+                    <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {crew?.map((member) => (
+                        <li key={member.id}>
+                          <Link
+                            href={`/mig?id=${member.id}`}
+                            className="block rounded-lg border border-sea-border bg-sea-surface px-4 py-3 text-center font-medium text-sea-ink shadow-sm hover:border-sea-primary hover:text-sea-primary"
+                          >
+                            {member.name}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
             </div>
           </div>
+
+          <CtaBox
+            href="/overblik"
+            color="accent"
+            title="Overblik"
+            subtitle="Samlet overblik over besætning tilmeldt til sejladser"
+            icon={
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5"
+                aria-hidden="true"
+              >
+                <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+                <line x1="3.5" y1="9.5" x2="20.5" y2="9.5" />
+                <line x1="8.5" y1="9.5" x2="8.5" y2="19.5" />
+              </svg>
+            }
+          />
         </div>
       </div>
     </div>
