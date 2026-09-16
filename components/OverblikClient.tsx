@@ -149,7 +149,7 @@ export default function OverblikClient() {
             <div className="flex items-center gap-1">
               <input
                 type="password"
-                placeholder="Lars-kode"
+                placeholder="Admin password"
                 value={codeInput}
                 onChange={(e) => setCodeInput(e.target.value)}
                 className="w-28 rounded-md border border-sea-border px-2 py-1.5 text-sm"
@@ -171,6 +171,8 @@ export default function OverblikClient() {
           {error}
         </p>
       )}
+
+      <Legend />
 
       {!loaded && <p className="text-sm text-sea-muted">Henter…</p>}
 
@@ -277,8 +279,6 @@ export default function OverblikClient() {
         </div>
       )}
 
-      <Legend />
-
       {unlocked && (
         <AdminPanel
           crew={crew}
@@ -301,26 +301,28 @@ function Legend() {
     "frameldt",
   ];
   return (
-    <div className="flex flex-wrap gap-3 text-xs text-sea-muted">
-      {entries.map((s) => (
-        <span key={s} className="inline-flex items-center gap-1">
-          <span
-            className={`inline-block h-4 w-4 rounded border text-center leading-4 ${STATUS_STYLE[s]}`}
-          >
-            {STATUS_SHORT[s]}
+    <div className="rounded-lg border border-sea-border bg-sea-surface p-3">
+      <div className="flex flex-wrap gap-x-5 gap-y-2">
+        {entries.map((s) => (
+          <span key={s} className="inline-flex items-center gap-2">
+            <span
+              className={`inline-flex h-7 w-7 items-center justify-center rounded-md border text-sm font-semibold ${STATUS_STYLE[s]}`}
+            >
+              {STATUS_SHORT[s]}
+            </span>
+            <span className="text-sm font-medium text-sea-ink">
+              {labelFor(s)}
+            </span>
           </span>
-          {labelFor(s)}
-        </span>
-      ))}
-      {entries.length > 0 && (
-        <span className="basis-full text-xs">
-          Klik på en celle (når låst op) for at ændre status. &quot;I
-          alt&quot;-rækken tæller Tilmeldt + Bekræftet; et evt. &quot;+N
-          måske&quot; viser hvor mange der har svaret måske. En lille blå
-          prik i hjørnet af en celle betyder, at personen har skrevet et
-          notat - hold musen over cellen for at læse det.
-        </span>
-      )}
+        ))}
+      </div>
+      <p className="mt-3 text-xs text-sea-muted">
+        Klik på en celle (når låst op) for at ændre status. &quot;I
+        alt&quot;-rækken tæller Tilmeldt + Bekræftet; et evt. &quot;+N
+        måske&quot; viser hvor mange der har svaret måske. En lille blå
+        prik i hjørnet af en celle betyder, at personen har skrevet et
+        notat - hold musen over cellen for at læse det.
+      </p>
     </div>
   );
 }
