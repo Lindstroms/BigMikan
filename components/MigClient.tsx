@@ -7,7 +7,11 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import type { Activity, CrewMember, Signup, SignupStatus } from "@/lib/types";
 import { STATUS_LABEL, STATUS_STYLE } from "@/lib/status";
 import { formatDateRange } from "@/lib/date";
+import { buildIcsCalendar } from "@/lib/ics";
+import { downloadTextFile } from "@/lib/download";
 import SetupNotice from "@/components/SetupNotice";
+
+const ATTENDING_STATUSES: SignupStatus[] = ["tilmeldt", "bekraeftet"];
 
 const CREW_CHOICES: { status: SignupStatus; label: string }[] = [
   { status: "tilmeldt", label: "Deltager" },
@@ -22,6 +26,7 @@ export default function MigClient() {
   const [member, setMember] = useState<CrewMember | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [signups, setSignups] = useState<Record<string, Signup>>({});
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
 
@@ -42,10 +47,13 @@ export default function MigClient() {
     if (signupRes.error) setError(signupRes.error.message);
     else {
       const map: Record<string, Signup> = {};
+      const notes: Record<string, string> = {};
       for (const s of (signupRes.data ?? []) as Signup[]) {
         map[s.activity_id] = s;
+        notes[s.activity_id] = s.note ?? "";
       }
       setSignups(map);
+      setNoteDrafts(notes);
     }
   }, [id]);
 
@@ -67,6 +75,41 @@ export default function MigClient() {
     if (error) setError(error.message);
     else setSignups((prev) => ({ ...prev, [activityId]: data as Signup }));
     setSavingId(null);
+  }
+
+  async function saveNote(activityId: string) {
+    if (!supabase || !id) return;
+    const note = noteDrafts[activityId]?.trim() || null;
+    if ((signups[activityId]?.note ?? null) === note) return;
+    const { data, error } = await supabase
+      .from("signups")
+      .upsert(
+        { crew_member_id: id, activity_id: activityId, note },
+        { onConflict: "crew_member_id,activity_id" },
+      )
+      .select()
+      .single();
+    if (error) setError(error.message);
+    else setSignups((prev) => ({ ...prev, [activityId]: data as Signup }));
+  }
+
+  function addActivityToCalendar(activity: Activity) {
+    downloadTextFile(
+      `${activity.name}.ics`,
+      buildIcsCalendar([activity]),
+      "text/calendar",
+    );
+  }
+
+  function addAllToCalendar() {
+    const attending = activities.filter((a) =>
+      ATTENDING_STATUSES.includes(signups[a.id]?.status ?? "mangler_svar"),
+    );
+    downloadTextFile(
+      "big-mikan-sejladser.ics",
+      buildIcsCalendar(attending),
+      "text/calendar",
+    );
   }
 
   if (!isSupabaseConfigured) {
@@ -99,11 +142,24 @@ export default function MigClient() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">Hej, {member.name}!</h1>
-        <p className="text-sm text-sea-muted">
-          Marker om du deltager i hver sejlads. Det gemmes med det samme.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Hej, {member.name}!</h1>
+          <p className="text-sm text-sea-muted">
+            Marker om du deltager i hver sejlads. Det gemmes med det samme.
+          </p>
+        </div>
+        {activities.some((a) =>
+          ATTENDING_STATUSES.includes(signups[a.id]?.status ?? "mangler_svar"),
+        ) && (
+          <button
+            type="button"
+            onClick={addAllToCalendar}
+            className="shrink-0 whitespace-nowrap rounded-md border border-sea-border bg-white px-2.5 py-1.5 text-xs font-medium hover:border-sea-primary"
+          >
+            + Kalender
+          </button>
+        )}
       </div>
 
       {activities.length === 0 && (
@@ -133,7 +189,7 @@ export default function MigClient() {
                   {STATUS_LABEL[current]}
                 </span>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 {CREW_CHOICES.map((choice) => (
                   <button
                     key={choice.status}
@@ -149,7 +205,29 @@ export default function MigClient() {
                     {choice.label}
                   </button>
                 ))}
+                {ATTENDING_STATUSES.includes(current) && (
+                  <button
+                    type="button"
+                    onClick={() => addActivityToCalendar(activity)}
+                    className="ml-auto rounded-md border border-sea-border bg-white px-2.5 py-1.5 text-xs font-medium text-sea-muted hover:border-sea-primary hover:text-sea-primary"
+                  >
+                    + Kalender
+                  </button>
+                )}
               </div>
+              <input
+                type="text"
+                placeholder="Notat (valgfrit) - fx “kommer kl. 10 i stedet”"
+                value={noteDrafts[activity.id] ?? ""}
+                onChange={(e) =>
+                  setNoteDrafts((prev) => ({
+                    ...prev,
+                    [activity.id]: e.target.value,
+                  }))
+                }
+                onBlur={() => saveNote(activity.id)}
+                className="mt-2 w-full rounded-md border border-sea-border px-2.5 py-1.5 text-sm placeholder:text-sea-muted/70"
+              />
             </li>
           );
         })}

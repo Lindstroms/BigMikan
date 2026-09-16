@@ -218,8 +218,13 @@ export default function OverblikClient() {
                     {member.email || "–"}
                   </td>
                   {activities.map((a) => {
-                    const status =
-                      signups[`${member.id}:${a.id}`]?.status ?? "mangler_svar";
+                    const signup = signups[`${member.id}:${a.id}`];
+                    const status = signup?.status ?? "mangler_svar";
+                    const note = signup?.note;
+                    const titleParts = [
+                      unlocked ? "Klik for at ændre status" : null,
+                      note ? `Notat: ${note}` : null,
+                    ].filter(Boolean);
                     return (
                       <td
                         key={a.id}
@@ -229,12 +234,19 @@ export default function OverblikClient() {
                           type="button"
                           disabled={!unlocked}
                           onClick={() => cycleCell(member.id, a.id)}
-                          title={unlocked ? "Klik for at ændre status" : undefined}
-                          className={`h-8 w-8 rounded-md border text-xs font-semibold ${STATUS_STYLE[status]} ${
+                          title={
+                            titleParts.length > 0
+                              ? titleParts.join(" - ")
+                              : undefined
+                          }
+                          className={`relative h-8 w-8 rounded-md border text-xs font-semibold ${STATUS_STYLE[status]} ${
                             unlocked ? "cursor-pointer hover:brightness-95" : "cursor-default"
                           }`}
                         >
                           {STATUS_SHORT[status]}
+                          {note && (
+                            <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-sea-primary" />
+                          )}
                         </button>
                       </td>
                     );
@@ -275,6 +287,7 @@ export default function OverblikClient() {
         <AdminPanel
           crew={crew}
           activities={activities}
+          signups={signups}
           onChanged={load}
           setError={setError}
         />
@@ -307,7 +320,9 @@ function Legend() {
         <span className="basis-full text-xs">
           Klik på en celle (når låst op) for at ændre status. &quot;I
           alt&quot;-rækken tæller Tilmeldt + Bekræftet; et evt. &quot;+N
-          måske&quot; viser hvor mange der har svaret måske.
+          måske&quot; viser hvor mange der har svaret måske. En lille blå
+          prik i hjørnet af en celle betyder, at personen har skrevet et
+          notat - hold musen over cellen for at læse det.
         </span>
       )}
     </div>
@@ -354,11 +369,13 @@ function csvEscape(value: string) {
 function AdminPanel({
   crew,
   activities,
+  signups,
   onChanged,
   setError,
 }: {
   crew: CrewMember[];
   activities: Activity[];
+  signups: Record<string, Signup>;
   onChanged: () => void;
   setError: (msg: string | null) => void;
 }) {
@@ -379,6 +396,9 @@ function AdminPanel({
   const [editActivityName, setEditActivityName] = useState("");
   const [editStartDate, setEditStartDate] = useState("");
   const [editEndDate, setEditEndDate] = useState("");
+
+  const [rosterActivityId, setRosterActivityId] = useState<string | null>(null);
+  const [copiedActivityId, setCopiedActivityId] = useState<string | null>(null);
 
   async function addMember(e: React.FormEvent) {
     e.preventDefault();
@@ -509,6 +529,43 @@ function AdminPanel({
     else {
       setEditingActivityId(null);
       onChanged();
+    }
+  }
+
+  function rosterFor(activityId: string) {
+    const attending: CrewMember[] = [];
+    const maybe: CrewMember[] = [];
+    for (const member of crew) {
+      const status = signups[`${member.id}:${activityId}`]?.status;
+      if (status === "tilmeldt" || status === "bekraeftet") attending.push(member);
+      else if (status === "maaske") maybe.push(member);
+    }
+    return { attending, maybe };
+  }
+
+  function rosterText(activity: Activity, attending: CrewMember[], maybe: CrewMember[]) {
+    const lines = [
+      `Besætningsliste - ${activity.name} (${activity.start_date})`,
+      "",
+      `Tilmeldt (${attending.length}):`,
+      ...(attending.length
+        ? attending.map((m) => `- ${m.name}${m.phone ? ` - ${m.phone}` : ""}`)
+        : ["(ingen endnu)"]),
+    ];
+    if (maybe.length) {
+      lines.push("", `Måske (${maybe.length}):`, ...maybe.map((m) => `- ${m.name}`));
+    }
+    return lines.join("\n");
+  }
+
+  async function copyRoster(activity: Activity) {
+    const { attending, maybe } = rosterFor(activity.id);
+    try {
+      await navigator.clipboard.writeText(rosterText(activity, attending, maybe));
+      setCopiedActivityId(activity.id);
+      setTimeout(() => setCopiedActivityId(null), 2000);
+    } catch {
+      setError("Kunne ikke kopiere til udklipsholder.");
     }
   }
 
@@ -666,26 +723,47 @@ function AdminPanel({
                 </form>
               </li>
             ) : (
-              <li key={a.id} className="flex items-center justify-between py-1.5">
-                <span>
-                  {a.name} <span className="text-sea-muted">({a.start_date})</span>
-                </span>
-                <div className="flex shrink-0 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => startEditActivity(a)}
-                    className="text-xs text-sea-primary underline"
-                  >
-                    Rediger
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeActivity(a.id)}
-                    className="text-xs text-rose-600 underline"
-                  >
-                    Slet
-                  </button>
+              <li key={a.id} className="py-1.5">
+                <div className="flex items-center justify-between">
+                  <span>
+                    {a.name}{" "}
+                    <span className="text-sea-muted">({a.start_date})</span>
+                  </span>
+                  <div className="flex shrink-0 gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setRosterActivityId((cur) => (cur === a.id ? null : a.id))
+                      }
+                      className="text-xs text-sea-primary underline"
+                    >
+                      {rosterActivityId === a.id ? "Skjul liste" : "Besætningsliste"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => startEditActivity(a)}
+                      className="text-xs text-sea-primary underline"
+                    >
+                      Rediger
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeActivity(a.id)}
+                      className="text-xs text-rose-600 underline"
+                    >
+                      Slet
+                    </button>
+                  </div>
                 </div>
+
+                {rosterActivityId === a.id && (
+                  <RosterPanel
+                    activity={a}
+                    roster={rosterFor(a.id)}
+                    copied={copiedActivityId === a.id}
+                    onCopy={() => copyRoster(a)}
+                  />
+                )}
               </li>
             ),
           )}
@@ -717,6 +795,57 @@ function AdminPanel({
           </button>
         </form>
       </div>
+    </div>
+  );
+}
+
+function RosterPanel({
+  activity,
+  roster,
+  copied,
+  onCopy,
+}: {
+  activity: Activity;
+  roster: { attending: CrewMember[]; maybe: CrewMember[] };
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  const { attending, maybe } = roster;
+  return (
+    <div className="mt-2 rounded-lg border border-sea-border bg-sea-bg p-3 text-sm">
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-medium">
+          {activity.name} - {attending.length} tilmeldt
+        </p>
+        <button
+          type="button"
+          onClick={onCopy}
+          className="shrink-0 rounded-md border border-sea-border bg-white px-2.5 py-1 text-xs font-medium hover:border-sea-primary"
+        >
+          {copied ? "Kopieret!" : "Kopiér liste"}
+        </button>
+      </div>
+
+      {attending.length === 0 ? (
+        <p className="mt-2 text-sea-muted">Ingen tilmeldt endnu.</p>
+      ) : (
+        <ul className="mt-2 space-y-1">
+          {attending.map((m) => (
+            <li key={m.id} className="flex justify-between gap-2 text-sea-ink">
+              <span>{m.name}</span>
+              <span className="text-sea-muted">
+                {m.phone || m.email || ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {maybe.length > 0 && (
+        <p className="mt-2 text-xs text-sea-muted">
+          Måske: {maybe.map((m) => m.name).join(", ")}
+        </p>
+      )}
     </div>
   );
 }

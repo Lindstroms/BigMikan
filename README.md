@@ -145,14 +145,20 @@ supabase/
 **Implementeret:**
 - Vælg navn → se sæsonens sejladser → tilmeld/afmeld/måske med ét klik,
   gemmes øjeblikkeligt i databasen.
+- Notat-felt pr. tilmelding (fx "kommer først lørdag"), synligt for Lars som
+  et hover-tooltip på cellen i Overblik.
+- "Tilføj til kalender" (.ics) pr. sejlads eller for alle ens tilmeldte
+  sejladser samlet.
 - Overblik som matrix (besætning × sejladser), CSV-eksport.
+- Besætningsliste pr. sejlads i Administration - se/kopiér hvem der er
+  tilmeldt/måske til én bestemt sejlads (til fx havnekontor eller
+  stævneledelse).
 - Lås op med kode for at kunne ændre status pr. celle (inkl. "Bekræftet"),
-  tilføje/deaktivere besætningsmedlemmer, tilføje/slette sejladser.
+  tilføje/deaktivere/redigere/slette besætningsmedlemmer, tilføje/redigere/
+  slette sejladser.
 
-**Ikke inkluderet i denne første version (mulige næste skridt):**
-- Automatiske reminder-mails før en sejlads.
+**Ikke inkluderet i denne version (mulige næste skridt):**
+- Automatiske reminder-mails før en sejlads (kræver en mail-tjeneste og en
+  serverless function - appen har i dag ingen backend).
 - Rigtig login/adgangskontrol (Supabase Auth).
 - Historik/log over hvem der har ændret hvad og hvornår.
-- Notat-felt pr. tilmelding (fx "kommer først lørdag") i selve UI'en - findes
-  i datamodellen (`signups.note`), men er endnu ikke koblet til et
-  inputfelt.
