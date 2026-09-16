@@ -5,6 +5,7 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import type { Activity, CrewMember, Signup, SignupStatus } from "@/lib/types";
 import { STATUS_SHORT, STATUS_STYLE, nextStatus } from "@/lib/status";
 import { formatDateRange } from "@/lib/date";
+import { downloadTextFile } from "@/lib/download";
 import SetupNotice from "@/components/SetupNotice";
 
 const UNLOCK_KEY = "bigmikan_unlocked";
@@ -111,13 +112,8 @@ export default function OverblikClient() {
     const csv = [header, ...rows]
       .map((row) => row.map(csvEscape).join(";"))
       .join("\n");
-    const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "big-mikan-overblik.csv";
-    link.click();
-    URL.revokeObjectURL(url);
+    // Leading BOM so Excel opens the UTF-8 file with æøå intact.
+    downloadTextFile("big-mikan-overblik.csv", `﻿${csv}`, "text/csv");
   }
 
   if (!isSupabaseConfigured) {
