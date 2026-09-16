@@ -9,6 +9,7 @@ import SetupNotice from "@/components/SetupNotice";
 export default function HomePage() {
   const [crew, setCrew] = useState<CrewMember[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (!supabase) return;
@@ -29,7 +30,8 @@ export default function HomePage() {
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="space-y-2">
         <CtaBox
-          href="#hvem-er-du"
+          onClick={() => setExpanded((v) => !v)}
+          expanded={expanded}
           color="primary"
           title="Tilmeld sejlads"
           subtitle="Meld dig til eller fra sæsonens sejladser"
@@ -74,65 +76,76 @@ export default function HomePage() {
         />
       </div>
 
-      <div id="hvem-er-du" className="relative overflow-hidden rounded-2xl">
-        <div
-          className="absolute inset-0 bg-cover"
-          style={{
-            backgroundImage: `url(${basePath}/boat.jpg)`,
-            backgroundPosition: "center 62%",
-          }}
-        />
-        <div className="absolute inset-0 bg-sea-bg/80" />
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="relative overflow-hidden rounded-2xl">
+            <div
+              className="absolute inset-0 bg-cover"
+              style={{
+                backgroundImage: `url(${basePath}/boat.jpg)`,
+                backgroundPosition: "center 62%",
+              }}
+            />
+            <div className="absolute inset-0 bg-sea-bg/80" />
 
-        <div className="relative space-y-4 p-5 sm:p-6">
-          <h1 className="text-xl font-semibold">Hvem er du?</h1>
+            <div className="relative space-y-4 p-5 sm:p-6">
+              <h1 className="text-xl font-semibold">Hvem er du?</h1>
 
-          {!isSupabaseConfigured ? (
-            <SetupNotice />
-          ) : (
-            <>
-              <p className="text-sm text-sea-muted">
-                Vælg dit navn for at se sæsonens sejladser og melde dig til
-                eller fra.
-              </p>
+              {!isSupabaseConfigured ? (
+                <SetupNotice />
+              ) : (
+                <>
+                  <p className="text-sm text-sea-muted">
+                    Vælg dit navn for at se sæsonens sejladser og melde dig
+                    til eller fra.
+                  </p>
 
-              {error && (
-                <p className="rounded-lg border border-rose-300 bg-rose-50 p-3 text-sm text-rose-700">
-                  Kunne ikke hente besætningslisten: {error}
-                </p>
+                  {error && (
+                    <p className="rounded-lg border border-rose-300 bg-rose-50 p-3 text-sm text-rose-700">
+                      Kunne ikke hente besætningslisten: {error}
+                    </p>
+                  )}
+
+                  {!error && crew === null && (
+                    <p className="text-sm text-sea-muted">
+                      Henter besætningsliste…
+                    </p>
+                  )}
+
+                  {crew !== null && crew.length === 0 && (
+                    <p className="text-sm text-sea-muted">
+                      Der er endnu ikke tilføjet nogen besætningsmedlemmer.
+                      Gå til{" "}
+                      <Link
+                        href="/overblik"
+                        className="text-sea-primary underline"
+                      >
+                        Overblik
+                      </Link>{" "}
+                      for at oprette dem.
+                    </p>
+                  )}
+
+                  <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {crew?.map((member) => (
+                      <li key={member.id}>
+                        <Link
+                          href={`/mig?id=${member.id}`}
+                          className="block rounded-lg border border-sea-border bg-sea-surface px-4 py-3 text-center font-medium text-sea-ink shadow-sm hover:border-sea-primary hover:text-sea-primary"
+                        >
+                          {member.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
-
-              {!error && crew === null && (
-                <p className="text-sm text-sea-muted">
-                  Henter besætningsliste…
-                </p>
-              )}
-
-              {crew !== null && crew.length === 0 && (
-                <p className="text-sm text-sea-muted">
-                  Der er endnu ikke tilføjet nogen besætningsmedlemmer. Gå
-                  til{" "}
-                  <Link href="/overblik" className="text-sea-primary underline">
-                    Overblik
-                  </Link>{" "}
-                  for at oprette dem.
-                </p>
-              )}
-
-              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {crew?.map((member) => (
-                  <li key={member.id}>
-                    <Link
-                      href={`/mig?id=${member.id}`}
-                      className="block rounded-lg border border-sea-border bg-sea-surface px-4 py-3 text-center font-medium text-sea-ink shadow-sm hover:border-sea-primary hover:text-sea-primary"
-                    >
-                      {member.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -141,12 +154,16 @@ export default function HomePage() {
 
 function CtaBox({
   href,
+  onClick,
+  expanded,
   color,
   icon,
   title,
   subtitle,
 }: {
-  href: string;
+  href?: string;
+  onClick?: () => void;
+  expanded?: boolean;
   color: "primary" | "accent";
   icon: ReactNode;
   title: string;
@@ -157,11 +174,11 @@ function CtaBox({
       ? "bg-sea-primary shadow-[0_8px_20px_-10px_rgba(11,79,108,0.55)] hover:bg-sea-primaryDark"
       : "bg-sea-accent shadow-[0_8px_20px_-10px_rgba(27,138,90,0.5)] hover:brightness-95";
 
-  return (
-    <Link
-      href={href}
-      className={`flex items-center gap-3.5 rounded-2xl px-4 py-4 text-left text-white ${colorClasses}`}
-    >
+  const chevronRotation =
+    expanded === undefined ? "" : expanded ? "-rotate-90" : "rotate-90";
+
+  const content = (
+    <>
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-white/15">
         {icon}
       </span>
@@ -176,11 +193,32 @@ function CtaBox({
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="ml-auto h-4 w-4 shrink-0 text-white/70"
+        className={`ml-auto h-4 w-4 shrink-0 text-white/70 transition-transform duration-200 ${chevronRotation}`}
         aria-hidden="true"
       >
         <path d="M9 6l6 6-6 6" />
       </svg>
-    </Link>
+    </>
+  );
+
+  const className = `flex w-full items-center gap-3.5 rounded-2xl px-4 py-4 text-left text-white ${colorClasses}`;
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={expanded}
+      className={className}
+    >
+      {content}
+    </button>
   );
 }
