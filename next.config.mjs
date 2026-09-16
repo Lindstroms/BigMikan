@@ -5,13 +5,21 @@
 const isGithubPagesBuild = process.env.GITHUB_PAGES === "true";
 const repoName = "BigMikan";
 
+const basePath = isGithubPagesBuild ? `/${repoName}` : "";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   output: "export",
   trailingSlash: true,
-  basePath: isGithubPagesBuild ? `/${repoName}` : "",
+  basePath,
   assetPrefix: isGithubPagesBuild ? `/${repoName}/` : "",
+  // Exposed to client code so plain `public/` asset URLs (e.g. CSS
+  // background-image) can be prefixed correctly - next/link and next/image
+  // handle basePath automatically, but a manual url() reference doesn't.
+  env: {
+    NEXT_PUBLIC_BASE_PATH: basePath,
+  },
 };
 
 export default nextConfig;
