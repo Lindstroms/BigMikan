@@ -69,3 +69,13 @@ create policy "public read/write activities" on activities
 drop policy if exists "public read/write signups" on signups;
 create policy "public read/write signups" on signups
   for all using (true) with check (true);
+
+-- RLS policies alone aren't enough - PostgREST also enforces plain
+-- Postgres table-level GRANTs for the anon/authenticated roles, as a
+-- separate layer underneath RLS. Without these, every request fails with
+-- "permission denied for table ..." even though the policies above allow
+-- the row. Bundled here so a fresh project never hits that trap.
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on public.crew_members to anon, authenticated;
+grant select, insert, update, delete on public.activities to anon, authenticated;
+grant select, insert, update, delete on public.signups to anon, authenticated;
